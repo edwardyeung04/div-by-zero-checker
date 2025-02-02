@@ -77,6 +77,15 @@ public class DivByZeroTransfer extends CFTransfer {
   private AnnotationMirror refineLhsOfComparison(
       Comparison operator, AnnotationMirror lhs, AnnotationMirror rhs) {
     // TODO
+    if (equal(rhs, reflect(Zero.class))) {
+      if (operator == Comparison.EQ) {
+        // When testing equality with 0, refine lhs to @Zero.
+        return glb(lhs, reflect(Zero.class));
+      } else if (operator == Comparison.NE) {
+        // When testing non-equality with 0, refine lhs to @NonZero.
+        return glb(lhs, reflect(NonZero.class));
+      }
+    }
     return lhs;
   }
 
@@ -98,6 +107,55 @@ public class DivByZeroTransfer extends CFTransfer {
   private AnnotationMirror arithmeticTransfer(
       BinaryOperator operator, AnnotationMirror lhs, AnnotationMirror rhs) {
     // TODO
+    // --- Addition and Subtraction ---
+    if (operator == BinaryOperator.PLUS || operator == BinaryOperator.MINUS) {
+      // 0 + 0 = 0
+      if (equal(lhs, reflect(Zero.class)) && equal(rhs, reflect(Zero.class))) {
+        return reflect(Zero.class);
+      }
+      // 0 + nonzero or nonzero + 0 = nonzero
+      else if ((equal(lhs, reflect(Zero.class)) && equal(rhs, reflect(NonZero.class)))
+              || (equal(lhs, reflect(NonZero.class)) && equal(rhs, reflect(Zero.class)))) {
+        return reflect(NonZero.class);
+      }
+      // nonzero + nonzero: may be zero (e.g., 2 + (-2)), so yield top
+      else if (equal(lhs, reflect(NonZero.class)) && equal(rhs, reflect(NonZero.class))) {
+        return top();
+      }
+      // Otherwise, be conservative.
+      else {
+        return top();
+      }
+    }
+    
+    // --- Multiplication ---
+    else if (operator == BinaryOperator.TIMES) {
+      if (equal(lhs, reflect(Zero.class)) || equal(rhs, reflect(Zero.class))) {
+        return reflect(Zero.class);
+      } else if (equal(lhs, reflect(NonZero.class)) && equal(rhs, reflect(NonZero.class))) {
+        return reflect(NonZero.class);
+      } else {
+        return top();
+      }
+    }
+    
+    // --- Division and Modulo ---
+    else if (operator == BinaryOperator.DIVIDE || operator == BinaryOperator.MOD) {
+      // Safe if the divisor (rhs) is definitely nonzero.
+      if (equal(rhs, reflect(NonZero.class))) {
+        if (equal(lhs, reflect(Zero.class))) {
+          return reflect(Zero.class);
+        } else {
+          return top();
+        }
+      }
+      // Otherwise, be conservative.
+      else {
+        return top();
+      }
+    }
+    
+    // Default to top.
     return top();
   }
 

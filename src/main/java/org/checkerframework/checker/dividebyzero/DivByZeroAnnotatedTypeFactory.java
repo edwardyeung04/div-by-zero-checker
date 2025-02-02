@@ -29,11 +29,11 @@ public class DivByZeroAnnotatedTypeFactory extends BaseAnnotatedTypeFactory {
       case INT_LITERAL:
         int intValue = (Integer) literal.getValue();
         // TODO
-        break;
+        return intValue == 0 ? Zero.class : NonZero.class;
       case LONG_LITERAL:
         long longValue = (Long) literal.getValue();
         // TODO
-        break;
+        return longValue == 0L ? Zero.class : NonZero.class;
     }
     return Top.class;
   }
