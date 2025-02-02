@@ -77,15 +77,26 @@ public class DivByZeroTransfer extends CFTransfer {
   private AnnotationMirror refineLhsOfComparison(
       Comparison operator, AnnotationMirror lhs, AnnotationMirror rhs) {
     // TODO
+    // Only refine if we're comparing against 0
     if (equal(rhs, reflect(Zero.class))) {
-      if (operator == Comparison.EQ) {
-        // When testing equality with 0, refine lhs to @Zero.
-        return glb(lhs, reflect(Zero.class));
-      } else if (operator == Comparison.NE) {
-        // When testing non-equality with 0, refine lhs to @NonZero.
-        return glb(lhs, reflect(NonZero.class));
+      switch (operator) {
+        case EQ:
+          // x == 0  => refine x to @Zero
+          return glb(lhs, reflect(Zero.class));
+
+        case NE:
+        case LT:
+        case GT:
+          // x != 0 or x < 0 or x > 0  => refine x to @NonZero
+          return glb(lhs, reflect(NonZero.class));
+
+        case LE:
+        case GE:
+          // x <= 0 or x >= 0 => might be zero, so no refinement
+          return lhs;
       }
     }
+
     return lhs;
   }
 
